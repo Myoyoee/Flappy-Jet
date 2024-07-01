@@ -1,5 +1,5 @@
-# Flappy-UAV
-Flappy UAV is an engaging web-based game inspired by the classic Flappy Bird, with a unique rocket-dodging twist. Built using HTML, CSS, and JavaScript, this game offers a fun and challenging experience for players of all ages.
+# Flappy-Jet
+Flappy Jet is an engaging web-based game inspired by the classic Flappy Bird, with a unique rocket-dodging twist. Built using HTML, CSS, and JavaScript, this game offers a fun and challenging experience for players of all ages.
 
 ## 🚀 Features
 
@@ -13,7 +13,7 @@ Flappy UAV is an engaging web-based game inspired by the classic Flappy Bird, wi
 ## 🎮 How to Play
 
 1. Click the "Start Game" button to begin
-2. Click or tap the screen to make the bird fly upwards
+2. Click or tap the screen to make the airplane fly upwards
 3. Navigate through the oncoming rockets
 4. Earn points for each rocket you successfully dodge
 5. Try to achieve the highest score possible!
@@ -21,7 +21,7 @@ Flappy UAV is an engaging web-based game inspired by the classic Flappy Bird, wi
 ## 🛠️ Installation
 
 1. Clone this repository:
-git clone https://github.com/Myoyoee/Flappy-UAV.git
+git clone https://github.com/Myoyoee/Flappy-Jet.git
 Copy2. Open `index.html` in your preferred web browser
 
 ## 🖥️ Technologies Used
@@ -41,7 +41,7 @@ Feel free to customize the game by modifying the following:
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](ttps://github.com/Myoyoee/Flappy-UAV.git).
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](ttps://github.com/Myoyoee/Flappy-Jet.git).
 
 ## 📝 License
 
