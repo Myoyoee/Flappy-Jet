@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flappy Jet</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap: https://ssl.gstatic.com 'unsafe-eval'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; media-src *; img-src 'self' data: content:;">
+    <title>Flappy Rocket Bird</title>
     <style>
         * {
             box-sizing: border-box;
@@ -87,10 +88,15 @@
         #leaderboard {
             list-style-type: none;
             padding: 0;
+            max-width: 200px;
+            text-align: left;
         }
         #leaderboard li {
             font-size: 18px;
             margin: 5px 0;
+            padding: 5px 10px;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
         }
         #level-up {
             position: absolute;
@@ -128,8 +134,8 @@
             <div id="level-up">Level Up!</div>
         </div>
         <div id="start-screen" class="screen">
-            <h1>Flappy Jet</h1>
-            <p>Click or tap to make the airplane fly!</p>
+            <h1>Flappy Rocket Bird</h1>
+            <p>Click or tap to make the bird fly!</p>
             <button id="start-button">Start Game</button>
             <button id="leaderboard-button">Leaderboard</button>
         </div>
@@ -163,6 +169,26 @@
         const jumpStrength = -10;
         let missileSpeed = 5;
         let level = 1;
+
+        let currentMedia;
+        const songs = ['music/song1.mp3', 'music/song2.mp3', 'music/song3.mp3', 'music/song4.mp3', 'music/song5.mp3', 'music/song6.mp3', 'music/song7.mp3'];
+
+        function playRandomSong() {
+            if (currentMedia) {
+                currentMedia.pause();
+            }
+
+            const randomSong = songs[Math.floor(Math.random() * songs.length)];
+            currentMedia = new Audio(randomSong);
+            currentMedia.play();
+            currentMedia.addEventListener('ended', playRandomSong); // Play next song when current one ends
+        }
+
+        function stopMusic() {
+            if (currentMedia) {
+                currentMedia.pause();
+            }
+        }
 
         function init() {
             birdY = game.clientHeight / 2;
@@ -205,7 +231,7 @@
             missiles.forEach((missile, index) => {
                 let missileX = parseInt(missile.style.right);
                 missileX += missileSpeed;
-                
+
                 if (score >= 30) {
                     let randomY = Math.sin(missileX * 0.01) * 40 * Math.random();
                     let currentY = parseInt(missile.style.top);
@@ -213,7 +239,7 @@
                     newY = Math.max(0, Math.min(newY, game.clientHeight - missile.height));
                     missile.style.top = `${newY}px`;
                 }
-                
+
                 missile.style.right = `${missileX}px`;
 
                 if (missileX > game.clientWidth) {
@@ -221,7 +247,7 @@
                     missiles.splice(index, 1);
                     score++;
                     scoreElement.textContent = score;
-                    
+
                     if (score % 10 === 0) {
                         addStar();
                         if (score % 20 === 0) {
@@ -243,9 +269,9 @@
         function checkCollision(bird, missile) {
             const birdRect = bird.getBoundingClientRect();
             const missileRect = missile.getBoundingClientRect();
-            return !(birdRect.right < missileRect.left || 
-                     birdRect.left > missileRect.right || 
-                     birdRect.bottom < missileRect.top || 
+            return !(birdRect.right < missileRect.left ||
+                     birdRect.left > missileRect.right ||
+                     birdRect.bottom < missileRect.top ||
                      birdRect.top > missileRect.bottom);
         }
 
@@ -257,6 +283,8 @@
 
             gameLoop = setInterval(updateGame, 20);
             missileInterval = setInterval(createMissile, 2000);
+
+            playRandomSong();
         }
 
         function endGame() {
@@ -266,6 +294,8 @@
             finalScoreElement.textContent = score;
             gameOverScreen.style.display = 'flex';
             updateLeaderboard(score);
+
+            stopMusic();
         }
 
         function updateLeaderboard(score) {
@@ -274,38 +304,38 @@
             leaderboard.sort((a, b) => b - a);
             leaderboard = leaderboard.slice(0, 10);
             localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
-            leaderboardElement.innerHTML = leaderboard.map(score => `<li>${score}</li>`).join('');
+
+            leaderboardElement.innerHTML = '';
+            leaderboard.forEach((score, index) => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `${index + 1}. ${score}`;
+                leaderboardElement.appendChild(listItem);
+            });
         }
 
-        function showLeaderboard() {
-            let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
-            leaderboardElement.innerHTML = leaderboard.map(score => `<li>${score}</li>`).join('');
-            startScreen.style.display = 'none';
-            leaderboardScreen.style.display = 'flex';
+        function addStar() {
+            const star = document.createElement('img');
+            star.src = 'star.svg';
+            star.className = 'star';
+            starsContainer.appendChild(star);
         }
 
         function levelUp() {
             level++;
             missileSpeed += 1;
+            document.documentElement.style.setProperty('--missile-size', `${50 + level * 5}px`);
             const levelUpElement = document.getElementById('level-up');
             levelUpElement.style.display = 'block';
             setTimeout(() => {
                 levelUpElement.style.display = 'none';
             }, 2000);
-
-            const newSize = 50 + (level - 1) * 10; // Increased from 5 to 10
-            document.documentElement.style.setProperty('--missile-size', `${newSize}px`);
-        }
-
-        function addStar() {
-            const star = document.createElement('div');
-            star.className = 'star';
-            star.innerHTML = '⭐';
-            starsContainer.appendChild(star);
         }
 
         document.getElementById('start-button').addEventListener('click', startGame);
-        document.getElementById('leaderboard-button').addEventListener('click', showLeaderboard);
+        document.getElementById('leaderboard-button').addEventListener('click', () => {
+            startScreen.style.display = 'none';
+            leaderboardScreen.style.display = 'flex';
+        });
         document.getElementById('restart-button').addEventListener('click', startGame);
         document.getElementById('home-button').addEventListener('click', () => {
             gameOverScreen.style.display = 'none';
@@ -316,9 +346,10 @@
             startScreen.style.display = 'flex';
         });
 
-        window.addEventListener('keydown', jump);
-        window.addEventListener('mousedown', jump);
+        document.addEventListener('keydown', jump);
+        document.addEventListener('click', jump);
 
+        // Initialize game
         init();
     </script>
 </body>
