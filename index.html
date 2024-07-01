@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flappy Rocket Bird</title>
+    <title>Flappy Jet</title>
     <style>
         * {
             box-sizing: border-box;
@@ -33,10 +33,14 @@
             transform: translateY(-50%);
             left: 50px;
         }
+        :root {
+            --missile-size: 50px;
+        }
         .missile {
             position: absolute;
-            width: 60px;
-            height: 30px;
+            width: var(--missile-size);
+            height: calc(var(--missile-size) * 0.6);
+            transition: width 0.3s, height 0.3s;
         }
         #score-container {
             position: absolute;
@@ -124,8 +128,8 @@
             <div id="level-up">Level Up!</div>
         </div>
         <div id="start-screen" class="screen">
-            <h1>Flappy Rocket Bird</h1>
-            <p>Click or tap to make the bird fly!</p>
+            <h1>Flappy Jet</h1>
+            <p>Click or tap to make the airplane fly!</p>
             <button id="start-button">Start Game</button>
             <button id="leaderboard-button">Leaderboard</button>
         </div>
@@ -172,6 +176,7 @@
             level = 1;
             missileSpeed = 5;
             starsContainer.innerHTML = '';
+            document.documentElement.style.setProperty('--missile-size', '50px');
         }
 
         function jump(event) {
@@ -182,15 +187,12 @@
         }
 
         function createMissile() {
-            const missile = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            missile.setAttribute("viewBox", "0 0 100 50");
-            missile.setAttribute("class", "missile");
-            missile.innerHTML = `
-                <path d="M10 25 L90 25 L80 10 L90 25 L80 40 Z" fill="#FF4500"/>
-                <circle cx="20" cy="25" r="10" fill="#FFA500"/>
-            `;
+            const missile = document.createElement('img');
+            missile.src = 'rocket.svg';
+            missile.className = 'missile';
             missile.style.right = '-60px';
             missile.style.top = `${Math.random() * (game.clientHeight - 30)}px`;
+            missile.dataset.verticalSpeed = Math.random() * 2 - 1; // Random speed between -1 and 1
             game.appendChild(missile);
             missiles.push(missile);
         }
@@ -204,9 +206,12 @@
                 let missileX = parseInt(missile.style.right);
                 missileX += missileSpeed;
                 
-                if (level > 1) {
-                    let randomY = Math.sin(missileX * 0.005) * 20; // Even more reduced amplitude and frequency
-                    missile.style.top = `${parseInt(missile.style.top) + randomY}px`;
+                if (score >= 30) {
+                    let randomY = Math.sin(missileX * 0.01) * 40 * Math.random();
+                    let currentY = parseInt(missile.style.top);
+                    let newY = currentY + randomY;
+                    newY = Math.max(0, Math.min(newY, game.clientHeight - missile.height));
+                    missile.style.top = `${newY}px`;
                 }
                 
                 missile.style.right = `${missileX}px`;
@@ -267,7 +272,7 @@
             let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
             leaderboard.push(score);
             leaderboard.sort((a, b) => b - a);
-            leaderboard = leaderboard.slice(0, 10); // Keep only top 10 scores
+            leaderboard = leaderboard.slice(0, 10);
             localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
             leaderboardElement.innerHTML = leaderboard.map(score => `<li>${score}</li>`).join('');
         }
@@ -281,12 +286,15 @@
 
         function levelUp() {
             level++;
-            missileSpeed = Math.max(3, missileSpeed - 0.5); // Gradually decrease speed, but not below 3
+            missileSpeed += 1;
             const levelUpElement = document.getElementById('level-up');
             levelUpElement.style.display = 'block';
             setTimeout(() => {
                 levelUpElement.style.display = 'none';
             }, 2000);
+
+            const newSize = 50 + (level - 1) * 10; // Increased from 5 to 10
+            document.documentElement.style.setProperty('--missile-size', `${newSize}px`);
         }
 
         function addStar() {

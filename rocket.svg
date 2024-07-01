@@ -1,2 +1,21 @@
-<?xml version="1.0" encoding="utf-8"?><!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
-<svg width="800px" height="800px" viewBox="0 -8 72 72" id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg"><defs><style>.cls-1{fill:#010101;}</style></defs><title>missile</title><path class="cls-1" d="M60.15,4.11S55.37,3.25,48.73,9.8l2.79,2.82,2.78,2.83C60.94,8.9,60.15,4.11,60.15,4.11Z"/><rect class="cls-1" x="49.37" y="10" width="1.57" height="7.93" transform="translate(4.64 39.25) rotate(-44.61)"/><rect class="cls-1" x="14.55" y="25.36" width="40.09" height="7.93" transform="translate(-10.63 32.75) rotate(-44.62)"/><polyline class="cls-1" points="15.48 41.3 23.96 32.94 15.27 34.19 11.82 37.6"/><polyline class="cls-1" points="22.3 48.22 30.78 39.85 29.41 48.52 25.96 51.92"/></svg>
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 20010904//EN"
+ "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg version="1.0" xmlns="http://www.w3.org/2000/svg"
+ width="1280.000000pt" height="640.000000pt" viewBox="0 0 1280.000000 640.000000"
+ preserveAspectRatio="xMidYMid meet">
+<metadata>
+Created by potrace 1.15, written by Peter Selinger 2001-2017
+</metadata>
+<g transform="translate(0.000000,640.000000) scale(0.100000,-0.100000)"
+fill="#000000" stroke="none">
+<path d="M11100 4420 l-775 -449 -4098 -1 c-4064 0 -4099 0 -4265 -20 -622
+-76 -997 -175 -1352 -356 -175 -89 -605 -367 -605 -391 0 -22 432 -303 593
+-386 318 -162 659 -261 1143 -331 421 -61 53 -56 4510 -56 l4082 0 766 -443
+c421 -243 776 -443 789 -445 19 -3 22 0 17 20 -9 40 -135 858 -135 877 0 11
+13 24 32 32 43 18 126 103 167 173 19 32 49 95 66 142 17 46 34 87 37 90 7 6
+2 7 403 -71 269 -52 290 -55 302 -39 7 9 10 20 8 25 -3 4 -155 94 -339 200
+l-333 192 -6 96 c-15 283 -144 566 -299 653 -21 12 -38 29 -38 39 0 15 120
+794 134 872 4 21 2 27 -12 26 -9 0 -366 -202 -792 -449z"/>
+</g>
+</svg>
