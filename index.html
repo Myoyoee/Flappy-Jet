@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flappy Rocket Bird</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            user-select: none;
+            background-color: #87CEEB;
+            overflow: hidden;
+        }
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+        #game {
+            width: 100%;
+            height: 100%;
+        }
+        #bird {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            transform: translateY(-50%);
+            left: 50px;
+        }
+        .missile {
+            position: absolute;
+            width: 60px;
+            height: 30px;
+        }
+        #score-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            color: white;
+            z-index: 10;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+        #score {
+            font-weight: bold;
+            font-size: 32px;
+        }
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            z-index: 20;
+        }
+        button {
+            font-size: 18px;
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #leaderboard {
+            list-style-type: none;
+            padding: 0;
+        }
+        #leaderboard li {
+            font-size: 18px;
+            margin: 5px 0;
+        }
+        #level-up {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 36px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px 20px;
+            border-radius: 10px;
+            display: none;
+            z-index: 15;
+        }
+        #stars {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+        }
+        .star {
+            width: 30px;
+            height: 30px;
+            margin-right: 5px;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="game">
+            <img id="bird" src="bird.svg" alt="Bird">
+            <div id="score-container">Score: <span id="score">0</span></div>
+            <div id="stars"></div>
+            <div id="level-up">Level Up!</div>
+        </div>
+        <div id="start-screen" class="screen">
+            <h1>Flappy Rocket Bird</h1>
+            <p>Click or tap to make the bird fly!</p>
+            <button id="start-button">Start Game</button>
+            <button id="leaderboard-button">Leaderboard</button>
+        </div>
+        <div id="game-over-screen" class="screen" style="display: none;">
+            <h2>Game Over</h2>
+            <p>Your score: <span id="final-score"></span></p>
+            <button id="restart-button">Play Again</button>
+            <button id="home-button">Home</button>
+        </div>
+        <div id="leaderboard-screen" class="screen" style="display: none;">
+            <h2>Leaderboard</h2>
+            <ol id="leaderboard"></ol>
+            <button id="back-button">Back</button>
+        </div>
+    </div>
+    <script>
+        const game = document.getElementById('game');
+        const bird = document.getElementById('bird');
+        const scoreElement = document.getElementById('score');
+        const starsContainer = document.getElementById('stars');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const leaderboardScreen = document.getElementById('leaderboard-screen');
+        const finalScoreElement = document.getElementById('final-score');
+        const leaderboardElement = document.getElementById('leaderboard');
+
+        let birdY, velocity, score, isGameRunning;
+        let gameLoop, missileInterval;
+        let missiles = [];
+        const gravity = 0.5;
+        const jumpStrength = -10;
+        let missileSpeed = 5;
+        let level = 1;
+
+        function init() {
+            birdY = game.clientHeight / 2;
+            velocity = 0;
+            score = 0;
+            isGameRunning = false;
+            scoreElement.textContent = score;
+            bird.style.top = `${birdY}px`;
+            missiles.forEach(missile => game.removeChild(missile));
+            missiles = [];
+            level = 1;
+            missileSpeed = 5;
+            starsContainer.innerHTML = '';
+        }
+
+        function jump(event) {
+            if (isGameRunning) {
+                velocity = jumpStrength;
+                event.preventDefault();
+            }
+        }
+
+        function createMissile() {
+            const missile = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            missile.setAttribute("viewBox", "0 0 100 50");
+            missile.setAttribute("class", "missile");
+            missile.innerHTML = `
+                <path d="M10 25 L90 25 L80 10 L90 25 L80 40 Z" fill="#FF4500"/>
+                <circle cx="20" cy="25" r="10" fill="#FFA500"/>
+            `;
+            missile.style.right = '-60px';
+            missile.style.top = `${Math.random() * (game.clientHeight - 30)}px`;
+            game.appendChild(missile);
+            missiles.push(missile);
+        }
+
+        function updateGame() {
+            velocity += gravity;
+            birdY += velocity;
+            bird.style.top = `${birdY}px`;
+
+            missiles.forEach((missile, index) => {
+                let missileX = parseInt(missile.style.right);
+                missileX += missileSpeed;
+                
+                if (level > 1) {
+                    let randomY = Math.sin(missileX * 0.005) * 20; // Even more reduced amplitude and frequency
+                    missile.style.top = `${parseInt(missile.style.top) + randomY}px`;
+                }
+                
+                missile.style.right = `${missileX}px`;
+
+                if (missileX > game.clientWidth) {
+                    game.removeChild(missile);
+                    missiles.splice(index, 1);
+                    score++;
+                    scoreElement.textContent = score;
+                    
+                    if (score % 10 === 0) {
+                        addStar();
+                        if (score % 20 === 0) {
+                            levelUp();
+                        }
+                    }
+                }
+
+                if (checkCollision(bird, missile)) {
+                    endGame();
+                }
+            });
+
+            if (birdY > game.clientHeight - 50 || birdY < 0) {
+                endGame();
+            }
+        }
+
+        function checkCollision(bird, missile) {
+            const birdRect = bird.getBoundingClientRect();
+            const missileRect = missile.getBoundingClientRect();
+            return !(birdRect.right < missileRect.left || 
+                     birdRect.left > missileRect.right || 
+                     birdRect.bottom < missileRect.top || 
+                     birdRect.top > missileRect.bottom);
+        }
+
+        function startGame() {
+            init();
+            isGameRunning = true;
+            startScreen.style.display = 'none';
+            gameOverScreen.style.display = 'none';
+
+            gameLoop = setInterval(updateGame, 20);
+            missileInterval = setInterval(createMissile, 2000);
+        }
+
+        function endGame() {
+            isGameRunning = false;
+            clearInterval(gameLoop);
+            clearInterval(missileInterval);
+            finalScoreElement.textContent = score;
+            gameOverScreen.style.display = 'flex';
+            updateLeaderboard(score);
+        }
+
+        function updateLeaderboard(score) {
+            let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
+            leaderboard.push(score);
+            leaderboard.sort((a, b) => b - a);
+            leaderboard = leaderboard.slice(0, 10); // Keep only top 10 scores
+            localStorage.setItem('leaderboard', JSON.stringify(leaderboard));
+            leaderboardElement.innerHTML = leaderboard.map(score => `<li>${score}</li>`).join('');
+        }
+
+        function showLeaderboard() {
+            let leaderboard = JSON.parse(localStorage.getItem('leaderboard')) || [];
+            leaderboardElement.innerHTML = leaderboard.map(score => `<li>${score}</li>`).join('');
+            startScreen.style.display = 'none';
+            leaderboardScreen.style.display = 'flex';
+        }
+
+        function levelUp() {
+            level++;
+            missileSpeed = Math.max(3, missileSpeed - 0.5); // Gradually decrease speed, but not below 3
+            const levelUpElement = document.getElementById('level-up');
+            levelUpElement.style.display = 'block';
+            setTimeout(() => {
+                levelUpElement.style.display = 'none';
+            }, 2000);
+        }
+
+        function addStar() {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.innerHTML = '⭐';
+            starsContainer.appendChild(star);
+        }
+
+        document.getElementById('start-button').addEventListener('click', startGame);
+        document.getElementById('leaderboard-button').addEventListener('click', showLeaderboard);
+        document.getElementById('restart-button').addEventListener('click', startGame);
+        document.getElementById('home-button').addEventListener('click', () => {
+            gameOverScreen.style.display = 'none';
+            startScreen.style.display = 'flex';
+        });
+        document.getElementById('back-button').addEventListener('click', () => {
+            leaderboardScreen.style.display = 'none';
+            startScreen.style.display = 'flex';
+        });
+
+        window.addEventListener('keydown', jump);
+        window.addEventListener('mousedown', jump);
+
+        init();
+    </script>
+</body>
+</html>
