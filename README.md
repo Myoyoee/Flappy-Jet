@@ -22,7 +22,8 @@ Flappy Jet is an engaging web-based game inspired by the classic Flappy Bird, wi
 
 1. Clone this repository:
 git clone https://github.com/Myoyoee/Flappy-Jet.git
-Copy2. Open `index.html` in your preferred web browser
+Copy
+2. Open `index.html` in your preferred web browser
 
 ## 🖥️ Technologies Used
 
