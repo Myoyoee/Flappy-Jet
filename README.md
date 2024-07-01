@@ -50,6 +50,5 @@ This project is [MIT](https://choosealicense.com/licenses/mit/) licensed.
 ## 🙏 Acknowledgements
 
 - Inspired by the original Flappy Bird game
-- SVG rocket design created for this project
 
-Enjoy playing Flappy UAV!
+Enjoy playing Flappy Jet!
