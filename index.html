@@ -43,9 +43,20 @@
             height: calc(var(--missile-size) * 0.6);
             transition: width 0.3s, height 0.3s;
         }
-        #score-container {
+        #mission {
             position: absolute;
             top: 10px;
+            right: 10px;
+            font-size: 18px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            z-index: 10;
+        }
+        #score-container {
+            position: absolute;
+            top: 50px;
             right: 10px;
             font-size: 24px;
             color: white;
@@ -123,12 +134,84 @@
             margin-right: 5px;
             display: inline-block;
         }
+        #audio-controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            z-index: 10;
+        }
+        #volume-slider {
+            width: 100px;
+        }
+        .particle {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background-color: white;
+            border-radius: 50%;
+            pointer-events: none;
+            opacity: 0.8;
+        }
+        .power-up {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+        }
+        .cloud {
+            position: absolute;
+            width: 100px;
+            height: 60px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 20px;
+        }
+        #background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 200%;
+            height: 100%;
+            background-image: url('background.png');
+            background-repeat: repeat-x;
+            z-index: -1;
+        }
+        #powerup-info {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 30;
+        }
+        #powerup-info h2 {
+            margin-bottom: 10px;
+        }
+        #powerup-info ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        #powerup-info li {
+            margin-bottom: 10px;
+        }
+        .powerup-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
     <div id="game-container">
         <div id="game">
+            <div id="background"></div>
             <img id="bird" src="bird.svg" alt="Bird">
+            <div id="mission"></div>
             <div id="score-container">Score: <span id="score">0</span></div>
             <div id="stars"></div>
             <div id="level-up">Level Up!</div>
@@ -136,7 +219,11 @@
         <div id="start-screen" class="screen">
             <h1>Flappy Jet</h1>
             <p>Click or tap to make the jet fly!</p>
-            <button id="start-button">Start Game</button>
+            <div id="difficulty">
+                <button class="difficulty-button" data-difficulty="easy">Easy</button>
+                <button class="difficulty-button" data-difficulty="medium">Medium</button>
+                <button class="difficulty-button" data-difficulty="hard">Hard</button>
+            </div>
             <button id="leaderboard-button">Leaderboard</button>
         </div>
         <div id="game-over-screen" class="screen" style="display: none;">
@@ -150,6 +237,19 @@
             <ol id="leaderboard"></ol>
             <button id="back-button">Back</button>
         </div>
+        <div id="audio-controls">
+            <button id="mute-button">Mute</button>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="1">
+        </div>
+        <div id="powerup-info" style="display: none;">
+            <h2>Power-Ups</h2>
+            <ul>
+                <li><span class="powerup-icon" style="background-color: blue;"></span>Shield: Temporary invincibility</li>
+                <li><span class="powerup-icon" style="background-color: green;"></span>Slow-Mo: Slows down missiles</li>
+                <li><span class="powerup-icon" style="background-color: yellow;"></span>Magnet: Attracts power-ups</li>
+            </ul>
+            <button id="powerup-info-close">Got it!</button>
+        </div>
     </div>
     <script>
         const game = document.getElementById('game');
@@ -161,17 +261,36 @@
         const leaderboardScreen = document.getElementById('leaderboard-screen');
         const finalScoreElement = document.getElementById('final-score');
         const leaderboardElement = document.getElementById('leaderboard');
+        const muteButton = document.getElementById('mute-button');
+        const volumeSlider = document.getElementById('volume-slider');
+        const missionElement = document.getElementById('mission');
+        const background = document.getElementById('background');
 
         let birdY, velocity, score, isGameRunning;
-        let gameLoop, missileInterval;
+        let gameLoop, missileInterval, powerUpInterval, cloudInterval;
         let missiles = [];
+        let powerUps = [];
+        let clouds = [];
         const gravity = 0.5;
         const jumpStrength = -10;
         let missileSpeed = 5;
         let level = 1;
+        let difficulty = 'medium';
+        let isShieldActive = false;
+        let isSlowMoActive = false;
+        let isMagnetActive = false;
+        let currentMission = null;
+        let missilesDodged = 0;
+        let powerUpsCollected = 0;
 
         let currentMedia;
         const songs = ['music/song1.mp3', 'music/song2.mp3', 'music/song3.mp3', 'music/song4.mp3', 'music/song5.mp3', 'music/song6.mp3', 'music/song7.mp3'];
+        const soundEffects = {
+            jump: new Audio('sounds/jump.mp3'),
+            collision: new Audio('sounds/collision.mp3'),
+            powerUp: new Audio('sounds/powerup.mp3'),
+            levelUp: new Audio('sounds/levelup.mp3')
+        };
 
         function playRandomSong() {
             if (currentMedia) {
@@ -180,8 +299,9 @@
 
             const randomSong = songs[Math.floor(Math.random() * songs.length)];
             currentMedia = new Audio(randomSong);
+            currentMedia.volume = volumeSlider.value;
             currentMedia.play();
-            currentMedia.addEventListener('ended', playRandomSong); // Play next song when current one ends
+            currentMedia.addEventListener('ended', playRandomSong);
         }
 
         function stopMusic() {
@@ -189,6 +309,28 @@
                 currentMedia.pause();
             }
         }
+
+        function playSoundEffect(effect) {
+            soundEffects[effect].currentTime = 0;
+            soundEffects[effect].volume = volumeSlider.value;
+            soundEffects[effect].play();
+        }
+
+        muteButton.addEventListener('click', () => {
+            if (currentMedia) {
+                currentMedia.muted = !currentMedia.muted;
+                muteButton.textContent = currentMedia.muted ? 'Unmute' : 'Mute';
+            }
+        });
+
+        volumeSlider.addEventListener('input', () => {
+            if (currentMedia) {
+                currentMedia.volume = volumeSlider.value;
+            }
+            for (let effect in soundEffects) {
+                soundEffects[effect].volume = volumeSlider.value;
+            }
+        });
 
         function init() {
             birdY = game.clientHeight / 2;
@@ -199,15 +341,26 @@
             bird.style.top = `${birdY}px`;
             missiles.forEach(missile => game.removeChild(missile));
             missiles = [];
+            powerUps.forEach(powerUp => game.removeChild(powerUp));
+            powerUps = [];
+            clouds.forEach(cloud => game.removeChild(cloud));
+            clouds = [];
             level = 1;
             missileSpeed = 5;
             starsContainer.innerHTML = '';
             document.documentElement.style.setProperty('--missile-size', '50px');
+            isShieldActive = false;
+            isSlowMoActive = false;
+            isMagnetActive = false;
+            missilesDodged = 0;
+            powerUpsCollected = 0;
+            setNewMission();
         }
 
         function jump(event) {
             if (isGameRunning) {
                 velocity = jumpStrength;
+                playSoundEffect('jump');
                 event.preventDefault();
             }
         }
@@ -218,9 +371,40 @@
             missile.className = 'missile';
             missile.style.right = '-60px';
             missile.style.top = `${Math.random() * (game.clientHeight - 30)}px`;
-            missile.dataset.verticalSpeed = Math.random() * 2 - 1; // Random speed between -1 and 1
+            missile.dataset.verticalSpeed = Math.random() * 2 - 1;
             game.appendChild(missile);
             missiles.push(missile);
+        }
+
+        function createPowerUp() {
+            const powerUp = document.createElement('div');
+            powerUp.className = 'power-up';
+            powerUp.style.right = '-30px';
+            powerUp.style.top = `${Math.random() * (game.clientHeight - 30)}px`;
+            
+            const powerUpType = Math.random();
+            if (powerUpType < 0.33) {
+                powerUp.style.backgroundColor = 'blue';
+                powerUp.dataset.type = 'shield';
+            } else if (powerUpType < 0.66) {
+                powerUp.style.backgroundColor = 'green';
+                powerUp.dataset.type = 'slowMo';
+            } else {
+                powerUp.style.backgroundColor = 'yellow';
+                powerUp.dataset.type = 'magnet';
+            }
+            
+            game.appendChild(powerUp);
+            powerUps.push(powerUp);
+        }
+
+        function createCloud() {
+            const cloud = document.createElement('div');
+            cloud.className = 'cloud';
+            cloud.style.right = '-100px';
+            cloud.style.top = `${Math.random() * (game.clientHeight - 60)}px`;
+            game.appendChild(cloud);
+            clouds.push(cloud);
         }
 
         function updateGame() {
@@ -228,9 +412,16 @@
             birdY += velocity;
             bird.style.top = `${birdY}px`;
 
+            let backgroundX = parseFloat(background.style.left || '0');
+            backgroundX -= 1;
+            if (backgroundX <= -game.clientWidth) {
+                backgroundX = 0;
+            }
+            background.style.left = `${backgroundX}px`;
+
             missiles.forEach((missile, index) => {
                 let missileX = parseInt(missile.style.right);
-                missileX += missileSpeed;
+                missileX += isSlowMoActive ? missileSpeed / 2 : missileSpeed;
 
                 if (score >= 30) {
                     let randomY = Math.sin(missileX * 0.01) * 40 * Math.random();
@@ -243,10 +434,13 @@
                 missile.style.right = `${missileX}px`;
 
                 if (missileX > game.clientWidth) {
+                    createParticles(game.clientWidth, parseInt(missile.style.top), 30);
                     game.removeChild(missile);
                     missiles.splice(index, 1);
                     score++;
                     scoreElement.textContent = score;
+                    missilesDodged++;
+                    checkMission();
 
                     if (score % 10 === 0) {
                         addStar();
@@ -256,23 +450,95 @@
                     }
                 }
 
-                if (checkCollision(bird, missile)) {
+                if (checkCollision(bird, missile) && !isShieldActive) {
+                    createParticles(bird.offsetLeft, bird.offsetTop, 50);
+                    playSoundEffect('collision');
                     endGame();
+                }
+            });
+
+            powerUps.forEach((powerUp, index) => {
+                let powerUpX = parseInt(powerUp.style.right);
+                powerUpX += 3;
+                powerUp.style.right = `${powerUpX}px`;
+
+                if (powerUpX > game.clientWidth) {
+                    game.removeChild(powerUp);
+                    powerUps.splice(index, 1);
+                } else if (checkCollision(bird, powerUp)) {
+                    activatePowerUp(powerUp.dataset.type);
+                    game.removeChild(powerUp);
+                    powerUps.splice(index, 1);
+                    playSoundEffect('powerUp');
+                    powerUpsCollected++;
+                    checkMission();
+                }
+            });
+
+            clouds.forEach((cloud, index) => {
+                let cloudX = parseInt(cloud.style.right);
+                cloudX += 2;
+                cloud.style.right = `${cloudX}px`;
+
+                if (cloudX > game.clientWidth) {
+                    game.removeChild(cloud);
+                    clouds.splice(index, 1);
                 }
             });
 
             if (birdY > game.clientHeight - 50 || birdY < 0) {
                 endGame();
             }
+
+            if (isMagnetActive) {
+                powerUps.forEach(powerUp => {
+                    let powerUpX = parseInt(powerUp.style.right);
+                    let powerUpY = parseInt(powerUp.style.top);
+                    let angle = Math.atan2(birdY - powerUpY, game.clientWidth - powerUpX - 50);
+                    powerUpX += Math.cos(angle) * 5;
+                    powerUpY += Math.sin(angle) * 5;
+                    powerUp.style.right = `${powerUpX}px`;
+                    powerUp.style.top = `${powerUpY}px`;
+                });
+            }
         }
 
-        function checkCollision(bird, missile) {
-            const birdRect = bird.getBoundingClientRect();
-            const missileRect = missile.getBoundingClientRect();
-            return !(birdRect.right < missileRect.left ||
-                     birdRect.left > missileRect.right ||
-                     birdRect.bottom < missileRect.top ||
-                     birdRect.top > missileRect.bottom);
+        function activatePowerUp(type) {
+            switch(type) {
+                case 'shield':
+                    isShieldActive = true;
+                    bird.style.border = '2px solid blue';
+                    setTimeout(() => {
+                        isShieldActive = false;
+                        bird.style.border = 'none';
+                    }, 5000);
+                    break;
+                case 'slowMo':
+                    isSlowMoActive = true;
+                    game.style.filter = 'sepia(50%)';
+                    setTimeout(() => {
+                        isSlowMoActive = false;
+                        game.style.filter = 'none';
+                    }, 5000);
+                    break;
+                case 'magnet':
+                    isMagnetActive = true;
+                    bird.style.boxShadow = '0 0 10px yellow';
+                    setTimeout(() => {
+                        isMagnetActive = false;
+                        bird.style.boxShadow = 'none';
+                    }, 5000);
+                    break;
+            }
+        }
+
+        function checkCollision(element1, element2) {
+            const rect1 = element1.getBoundingClientRect();
+            const rect2 = element2.getBoundingClientRect();
+            return !(rect1.right < rect2.left || 
+                     rect1.left > rect2.right || 
+                     rect1.bottom < rect2.top || 
+                     rect1.top > rect2.bottom);
         }
 
         function startGame() {
@@ -280,9 +546,19 @@
             isGameRunning = true;
             startScreen.style.display = 'none';
             gameOverScreen.style.display = 'none';
+            document.getElementById('powerup-info').style.display = 'block';
 
-            gameLoop = setInterval(updateGame, 20);
-            missileInterval = setInterval(createMissile, 2000);
+            switch(difficulty) {
+                case 'easy':
+                    missileSpeed = 3;
+                    break;
+                case 'medium':
+                    missileSpeed = 5;
+                    break;
+                case 'hard':
+                    missileSpeed = 7;
+                    break;
+            }
 
             playRandomSong();
         }
@@ -291,6 +567,8 @@
             isGameRunning = false;
             clearInterval(gameLoop);
             clearInterval(missileInterval);
+            clearInterval(powerUpInterval);
+            clearInterval(cloudInterval);
             finalScoreElement.textContent = score;
             gameOverScreen.style.display = 'flex';
             updateLeaderboard(score);
@@ -329,9 +607,70 @@
             setTimeout(() => {
                 levelUpElement.style.display = 'none';
             }, 2000);
+            playSoundEffect('levelUp');
         }
 
-        document.getElementById('start-button').addEventListener('click', startGame);
+        function createParticles(x, y, count = 20) {
+            for (let i = 0; i < count; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+                
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 3 + 2;
+                particle.velocityX = Math.cos(angle) * speed;
+                particle.velocityY = Math.sin(angle) * speed;
+                
+                const hue = Math.random() * 60 + 300; // Range from red to purple
+                particle.style.backgroundColor = `hsl(${hue}, 100%, 50%)`;
+                
+                game.appendChild(particle);
+                
+                setTimeout(() => {
+                    game.removeChild(particle);
+                }, 1000);
+                
+                let opacity = 1;
+                const fadeInterval = setInterval(() => {
+                    opacity -= 0.05;
+                    particle.style.opacity = opacity;
+                    
+                    particle.style.left = `${parseFloat(particle.style.left) + particle.velocityX}px`;
+                    particle.style.top = `${parseFloat(particle.style.top) + particle.velocityY}px`;
+                    
+                    if (opacity <= 0) {
+                        clearInterval(fadeInterval);
+                    }
+                }, 50);
+            }
+        }
+
+        function setNewMission() {
+            const missions = [
+                { text: "Dodge 50 missiles", check: () => missilesDodged >= 50 },
+                { text: "Reach score 100", check: () => score >= 100 },
+                { text: "Collect 5 power-ups", check: () => powerUpsCollected >= 5 }
+            ];
+            currentMission = missions[Math.floor(Math.random() * missions.length)];
+            missionElement.textContent = `Mission: ${currentMission.text}`;
+        }
+
+        function checkMission() {
+            if (currentMission.check()) {
+                score += 50;
+                scoreElement.textContent = score;
+                setNewMission();
+            }
+        }
+
+        document.querySelectorAll('.difficulty-button').forEach(button => {
+            button.addEventListener('click', () => {
+                difficulty = button.dataset.difficulty;
+                startGame();
+            });
+        });
+
         document.getElementById('leaderboard-button').addEventListener('click', () => {
             startScreen.style.display = 'none';
             leaderboardScreen.style.display = 'flex';
@@ -344,6 +683,13 @@
         document.getElementById('back-button').addEventListener('click', () => {
             leaderboardScreen.style.display = 'none';
             startScreen.style.display = 'flex';
+        });
+        document.getElementById('powerup-info-close').addEventListener('click', () => {
+            document.getElementById('powerup-info').style.display = 'none';
+            gameLoop = setInterval(updateGame, 20);
+            missileInterval = setInterval(createMissile, 2000);
+            powerUpInterval = setInterval(createPowerUp, 10000);
+            cloudInterval = setInterval(createCloud, 5000);
         });
 
         document.addEventListener('keydown', jump);
